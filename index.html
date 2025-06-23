@@ -225,7 +225,9 @@
     <img src="coffee.gif" alt="coffee mug gif" />
   </div>
   <p>Khushi’s portfolio is being planted with love. <br>Come back soon to see what blooms🌷</p>
-  <p>In the meantime, feel free to connect or send a message:</p> <div class="contact-section">
+  <p>In the meantime, feel free to connect or send a message:</p>
+  
+  <div class="contact-section">
     <h2>Get in Touch!</h2>
     <form id="contactForm" name="contact" data-netlify="true" method="POST">
       <div class="contact-form-group">
@@ -268,8 +270,8 @@
       const emailError = document.getElementById('emailError');
       const messageError = document.getElementById('messageError');
       const formSuccessMessage = document.getElementById('formSuccess');
+      const submitButton = form.querySelector('button[type="submit"]');
 
-      // Helper function to show/hide error messages
       function showError(element, message) {
         element.textContent = message;
         element.style.display = 'block';
@@ -280,7 +282,6 @@
         element.style.display = 'none';
       }
 
-      // Validation functions
       function validateName() {
         if (nameInput.value.trim() === '') {
           showError(nameError, 'Name is required.');
@@ -319,58 +320,71 @@
         }
       }
 
-      // Real-time validation on input change (modern UX)
       nameInput.addEventListener('input', validateName);
       emailInput.addEventListener('input', validateEmail);
       messageInput.addEventListener('input', validateMessage);
-
-      // Validate on blur (when user leaves the field) - good for catching errors after initial input
       nameInput.addEventListener('blur', validateName);
       emailInput.addEventListener('blur', validateEmail);
       messageInput.addEventListener('blur', validateMessage);
 
-      // Form submission handler
-      form.addEventListener('submit', function(event) {
-        event.preventDefault(); // Prevent default form submission
 
-        // Run all validations on submit
+      form.addEventListener('submit', async function(event) {
+        event.preventDefault(); // 
+
+        // Run all validations
         const isNameValid = validateName();
         const isEmailValid = validateEmail();
         const isMessageValid = validateMessage();
 
-        if (isNameValid && isEmailValid && isMessageValid) {
-          // All fields are valid, proceed with submission (e.g., via AJAX/Fetch API)
-          console.log('Form is valid. Sending data...');
-          // In a real scenario, you'd send this data to a backend or a form service.
-          // Example using Fetch API (replace with your actual endpoint)
-          fetch(form.action, {
-            method: form.method,
-            body: new FormData(form), // Automatically gets form data
-            headers: {
-              'Accept': 'application/json' // For services like Formspree
-            }
-          })
-          .then(response => {
-            if (response.ok) {
-              form.reset(); // Clear the form
-              formSuccessMessage.style.display = 'block'; // Show success message
-              setTimeout(() => {
-                formSuccessMessage.style.display = 'none'; // Hide after a few seconds
-              }, 5000); // Hide after 5 seconds
-            } else {
-              // Handle server errors or invalid responses
-              alert('Oops! There was a problem sending your message. Please try again later.');
-              console.error('Form submission error:', response);
-            }
-          })
-          .catch(error => {
-            // Handle network errors
-            alert('A network error occurred. Please check your internet connection and try again.');
-            console.error('Network error:', error);
+        if (!(isNameValid && isEmailValid && isMessageValid)) {
+          // If any validation fails, stop here and show errors
+          console.log('Form has errors. Please fix them.');
+          return; // Exit the function
+        }
+
+        // All validations passed, proceed with submission
+        submitButton.disabled = true; // Disable button to prevent multiple submissions
+        submitButton.textContent = 'Sending...'; // Show loading state
+        formSuccessMessage.style.display = 'none'; // Hide success message in case it was visible from a previous attempt
+
+        try {
+          const formData = new FormData(form);
+
+          formData.append('form-name', form.getAttribute('name'));
+
+          const response = await fetch('/', { // Submit to the root path
+            method: 'POST',
+            body: formData
           });
 
-        } else {
-          console.log('Form has errors. Please fix them.');
+          if (response.ok) {
+            // Form submission successful
+            form.reset(); // Clear the form fields
+            hideError(nameError); // Clear any remaining error messages
+            hideError(emailError);
+            hideError(messageError);
+
+            // Show custom success message
+            formSuccessMessage.style.display = 'block';
+            setTimeout(() => {
+              formSuccessMessage.style.display = 'none'; // Hide after 5 seconds
+            }, 5000);
+
+            alert('Thank you! Your message has been sent.');
+
+          } else {
+            // Something went wrong with Netlify processing the form
+            // Or a network error occurred
+            console.error('Netlify form submission failed:', response.status, response.statusText);
+            alert('Oops! There was a problem sending your message. Please try again later.'); // Your desired alert
+          }
+        } catch (error) {
+          // Network error (e.g., no internet connection)
+          console.error('Network error during form submission:', error);
+          alert('A network error occurred. Please check your internet connection and try again.'); // Your desired alert
+        } finally {
+          submitButton.disabled = false; // Re-enable the button
+          submitButton.textContent = 'Send Message'; // Reset button text
         }
       });
     });
